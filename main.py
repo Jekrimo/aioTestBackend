@@ -1,11 +1,12 @@
 from aiohttp import web
 import aiohttp_cors
+import json
 
 async def handle(request):
     name = request.match_info.get('name', "Anoous")
     text = "Hello, " + name
-    
-    return web.Response(text=text, headers={
+    y = json.dumps(text)
+    return web.json_response(y, headers={
             "X-Custom-Server-Header": "Custom data",
         })
 # async def testroute(request):
