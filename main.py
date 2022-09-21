@@ -1,41 +1,5 @@
-# from aiohttp import web
-# import aiohttp_cors
-# import json
-
-# async def handle(request):
-#     name = request.match_info.get('name', "Anoous")
-#     text = "Hello, " + name
-#     y = json.dumps(text)
-#     return web.json_response(y, headers={
-#             "X-Custom-Server-Header": "Custom data",
-#         })
-# # async def testroute(request):
-# #     id = request.match_info.get('id')
-# #     print(id)
-# #     # confirmhit = 'confirmhit'
-# #     return web.Response('confirmhit')
-# app = web.Application()
-# cors = aiohttp_cors.setup(app)
-# resource = cors.add(app.router.add_resource("/test/{name}"))
-# route = cors.add(
-#     resource.add_route("GET", handle), {
-#         "http://localhost:4200": aiohttp_cors.ResourceOptions(
-#             allow_credentials=True,
-#             expose_headers=("X-Custom-Server-Header",),
-#             allow_headers=("X-Requested-With", "Content-Type"),
-#             max_age=3600,
-#         )
-#     })
-
-# # for route in list(app.router.routes()):
-# #     cors.add(route)
-# app.add_routes([web.get('/', handle),
-#                 web.get('/{name}', handle),
-#                 web.get('/test/{name}', handle)])
-
-# if __name__ == '__main__': web.run_app(app)
-
 import asyncio
+import datetime
 import sqlite3
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict
@@ -82,7 +46,9 @@ def handle_json_error(
 @router.get("/")
 async def root(request: web.Request) -> web.Response:
     y = json.dumps('text')
-    return web.Response(text="Placeholder")
+    return web.Response(y,headers={
+            "X-Custom-Server-Header": "Custom data",
+        })
 
 
 @router.get("/api")
@@ -101,6 +67,51 @@ async def api_list_posts(request: web.Request) -> web.Response:
                 }
             )
     return web.json_response({"status": "ok", "data": ret})
+
+@router.get("/users")
+@handle_json_error
+async def api_list_users(request: web.Request) -> web.Response:
+    ret = []
+    db = request.config_dict["DB"]
+    async with db.execute("SELECT id, email, name, is_active, last_login FROM users") as cursor:
+        async for row in cursor:
+            ret.append({
+                "data": {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "email": row["email"],
+                    "is_active": row["is_active"],
+                    "last_login": row["last_login"],
+                }}
+            )
+    return web.json_response({"status": "ok", "data": ret})    
+
+@router.post("/users")
+@handle_json_error
+async def api_new_user(request: web.Request) -> web.Response:
+    user = await request.json()
+    name = user["name"]
+    email = user["email"]
+    password = user["password"]
+    db = request.config_dict["DB"]
+    async with db.execute(
+        "INSERT INTO users (email, password, name) VALUES(?, ?, ?)",
+        [email, password, name],
+    ) as cursor:
+        user_id = cursor.lastrowid
+    await db.commit()
+    return web.json_response(
+        {
+            "status": "ok",
+            "user": {
+                "id": user_id,
+                "name": name,
+                "email": email,
+                "password": password,
+                "is_active": True,
+            },
+        }
+    )
 
 
 @router.post("/api")
@@ -129,7 +140,6 @@ async def api_new_post(request: web.Request) -> web.Response:
             },
         }
     )
-
 
 @router.get("/api/{post}")
 @handle_json_error
@@ -223,31 +233,11 @@ async def init_app() -> web.Application:
     app = web.Application()
     app.add_routes(router)
     app.cleanup_ctx.append(init_db)
-    
-#     cors = aiohttp_cors.setup(app)
-#     #  cors.add(route)
-#     for route in list(router.routes):
-#         resource = cors.add(route)
-#         cors.setup(app, defaults={
-#         "*": aiohttp_cors.ResourceOptions(
-#         allow_credentials=True,
-#         expose_headers="*",
-#         allow_headers="*"
-#     )
-#   })
-#         cors.add(
-#         resource.add_route("GET", root), {
-#         "http://localhost:4200/home": aiohttp_cors.ResourceOptions(
-#             allow_credentials=True,
-#             expose_headers=("X-Custom-Server-Header",),
-#             allow_headers=("X-Requested-With", "Content-Type"),
-#             max_age=3600,
-#         )
-#     })
     cors = aiohttp_cors.setup(app, defaults={
         "http://localhost:4200": aiohttp_cors.ResourceOptions(
                 allow_credentials=True,
                 expose_headers=("X-Custom-Server-Header",),
+                allow_methods=["POST", "PUT", "GET", "OPTIONS"],
                 allow_headers=("X-Requested-With", "Content-Type"),
                 max_age=3600,
                 )
@@ -273,7 +263,20 @@ def try_make_db() -> None:
             text TEXT,
             owner TEXT,
             editor TEXT,
-            image BLOB)
+            image BLOB
+            )
+        """
+        )
+        cur.execute(
+            """CREATE TABLE users (
+            id INTEGER PRIMARY KEY,
+            email TEXT,
+            password TEXT,
+            name TEXT,
+            is_active BOOLEAN,
+            last_login DATETIME,
+            date_joined DATE
+            )
         """
         )
         conn.commit()
