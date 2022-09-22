@@ -77,7 +77,7 @@ async def api_list_users(request: web.Request) -> web.Response:
     async with db.execute("SELECT id, userID, email, name, password, is_active, last_login FROM users") as cursor:
         async for row in cursor:
             ret.append({
-                row["userID"]: {
+                'data': {
                     "id": row["id"],
                     "userID": row["userID"],
                     "name": row["name"],
@@ -99,21 +99,22 @@ async def api_new_user(request: web.Request) -> web.Response:
     db = request.config_dict["DB"]
     userID = str(uuid.uuid4())
     async with db.execute(
-        "INSERT INTO users (email, password, name) VALUES(?, ?, ?)",
-        [email, password, name],
+        "INSERT INTO users (email, password, name, userID) VALUES(?, ?, ?, ?)",
+        [email, password, name, userID],
     ) as cursor:
         id = cursor.lastrowid
     await db.commit()
     return web.json_response(
         {
             "status": "ok",
-            userID: {
-                "id": id,
-                "userID": userID,
-                "name": name,
-                "email": email,
-                "password": password,
-                "is_active": True,
+            "data": {
+                userID: {
+                    "id": id,
+                    "userID": userID,
+                    "name": name,
+                    "email": email,
+                    "password": password,
+                    "is_active": True,}
             },
         }
     )
