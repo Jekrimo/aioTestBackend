@@ -7,6 +7,7 @@ import aiohttp_cors
 import json
 import aiosqlite
 from aiohttp import web
+import uuid
 
 
 router = web.RouteTableDef()
@@ -73,11 +74,12 @@ async def api_list_posts(request: web.Request) -> web.Response:
 async def api_list_users(request: web.Request) -> web.Response:
     ret = []
     db = request.config_dict["DB"]
-    async with db.execute("SELECT id, email, name, password, is_active, last_login FROM users") as cursor:
+    async with db.execute("SELECT id, userID, email, name, password, is_active, last_login FROM users") as cursor:
         async for row in cursor:
             ret.append({
-                "data": {
+                row["userID"]: {
                     "id": row["id"],
+                    "userID": row["userID"],
                     "name": row["name"],
                     "password": row["password"],
                     "email": row["email"],
@@ -95,17 +97,19 @@ async def api_new_user(request: web.Request) -> web.Response:
     email = user["email"]
     password = user["password"]
     db = request.config_dict["DB"]
+    userID = str(uuid.uuid4())
     async with db.execute(
         "INSERT INTO users (email, password, name) VALUES(?, ?, ?)",
         [email, password, name],
     ) as cursor:
-        user_id = cursor.lastrowid
+        id = cursor.lastrowid
     await db.commit()
     return web.json_response(
         {
             "status": "ok",
-            "user": {
-                "id": user_id,
+            userID: {
+                "id": id,
+                "userID": userID,
                 "name": name,
                 "email": email,
                 "password": password,
@@ -271,6 +275,7 @@ def try_make_db() -> None:
         cur.execute(
             """CREATE TABLE users (
             id INTEGER PRIMARY KEY,
+            userID TEXT,
             email TEXT,
             password TEXT,
             name TEXT,
