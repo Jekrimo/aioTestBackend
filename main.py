@@ -73,18 +73,19 @@ async def api_list_posts(request: web.Request) -> web.Response:
 async def api_list_users(request: web.Request) -> web.Response:
     ret = []
     db = request.config_dict["DB"]
-    async with db.execute("SELECT id, email, name, is_active, last_login FROM users") as cursor:
+    async with db.execute("SELECT id, email, name, password, is_active, last_login FROM users") as cursor:
         async for row in cursor:
             ret.append({
                 "data": {
                     "id": row["id"],
                     "name": row["name"],
+                    "password": row["password"],
                     "email": row["email"],
                     "is_active": row["is_active"],
                     "last_login": row["last_login"],
                 }}
             )
-    return web.json_response({"status": "ok", "data": ret})    
+    return web.json_response(ret)    
 
 @router.post("/users")
 @handle_json_error
