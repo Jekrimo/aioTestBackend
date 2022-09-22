@@ -1,29 +1,23 @@
-# Foobar
+# Unknown
 
-Foobar is a Python library for dealing with word pluralization.
+Unknown is a Python library that will do something.
 
 ## Installation
 
-Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install Unknown.
 
-```bash
-pip install foobar
+## Requirements
+
+Python version 3.9.12
+Pip version 22.2.2
+aiohttp-devtools version 1.0.post0 found at https://github.com/aio-libs/aiohttp-devtools
+
+pip install asyncio, aiohttp, aiosqlite
+
+```run server
+adev runserver main.py
 ```
 
-## Usage
-
-```python
-import foobar
-
-# returns 'words'
-foobar.pluralize('word')
-
-# returns 'geese'
-foobar.pluralize('goose')
-
-# returns 'phenomenon'
-foobar.singularize('phenomena')
-```
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
